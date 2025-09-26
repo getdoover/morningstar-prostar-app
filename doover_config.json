@@ -1,0 +1,50 @@
+{
+    "morningstar_prostar_app": {
+        "name": "morningstar_prostar_app",
+        "display_name": "MorningStar ProStar App",
+        "type": "DEV",
+        "visibility": "PUB",
+        "allow_many": true,
+        "description": "An app to monitor and record solar and battery metrics via modbus from a MorningStar ProStar series solar controller.",
+        "long_description": "README.md",
+        "depends_on": [],
+        "owner_org_key": "36a22e32-ab81-4a39-b400-869d532a052d",
+        "image_name": "ghcr.io/getdoover/morningstar-prostar-app:main",
+        "container_registry_profile_key": "88953909-e9c4-4f81-9ec0-56239d4b0a2e",
+        "build_args": "--platform linux/amd64,linux/arm64",
+        "config_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "",
+            "title": "Application Config",
+            "type": "object",
+            "properties": {
+                "digital_outputs_enabled": {
+                    "title": "Digital Outputs Enabled",
+                    "x-name": "digital_outputs_enabled",
+                    "x-hidden": false,
+                    "type": "boolean",
+                    "default": true
+                },
+                "a_funny_message": {
+                    "title": "A Funny Message",
+                    "x-name": "a_funny_message",
+                    "x-hidden": false,
+                    "type": "string"
+                },
+                "simulator_app_key": {
+                    "format": "doover-application",
+                    "title": "Simulator App Key",
+                    "x-name": "simulator_app_key",
+                    "x-hidden": false,
+                    "type": "string",
+                    "description": "The app key for the simulator"
+                }
+            },
+            "additionalElements": true,
+            "required": [
+                "a_funny_message",
+                "simulator_app_key"
+            ]
+        }
+    }
+}
