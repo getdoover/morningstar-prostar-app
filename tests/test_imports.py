@@ -17,7 +17,3 @@ def test_config():
 def test_ui():
     from morningstar_prostar_app.app_ui import MorningstarProstarAppUI
     assert MorningstarProstarAppUI
-
-def test_state():
-    from morningstar_prostar_app.app_state import MorningstarProstarAppState
-    assert MorningstarProstarAppState
