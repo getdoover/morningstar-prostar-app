@@ -6,8 +6,13 @@ from .utils import SystemVoltage
 
 class MorningstarProstarAppConfig(config.Schema):
     def __init__(self):
-        self.sys_voltage = config.Enum("System Voltage", default=SystemVoltage.V_24, description="System voltage for the solar controller")
-        self.battery_max_ah = config.Numeric("Battery Max (Ah)", description="Max capacity of the battery")
+        self.sys_voltage = config.Enum(
+            "System Voltage", 
+            default=SystemVoltage.V_24.value, 
+            description="System voltage for the solar controller",
+            choices=[SystemVoltage.V_12.value, SystemVoltage.V_24.value, SystemVoltage.V_48.value]
+            )
+        self.battery_max_ah = config.Number("Battery Max (Ah)", description="Max capacity of the battery")
         self.modbus_slave_id = config.Integer("Modbus Slave ID", description="Modbus Slave ID for Prostar")
         self.modbus_config = ModbusConfig()
         
