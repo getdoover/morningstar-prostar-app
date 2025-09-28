@@ -32,7 +32,7 @@ class MorningstarProstarAppApplication(Application):
     async def main_loop(self):
         state = await self.modbus_iface.read_registers_async(
             bus_id=self.config.modbus_config.name.value,
-            modbus_id=self.config.slave_id.value,
+            modbus_id=self.config.slave_id,
             start_address=self.START_REG_NUM,
             num_registers=self.NUM_REGS,
             register_type=self.REGISTER_TYPE
