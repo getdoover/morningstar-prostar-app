@@ -62,7 +62,7 @@ class MorningstarProstarAppApplication(Application):
             "remaining_ah": b_ah,
             "panel_power": round(panel_current*panel_voltage,2),
             "daily_load":daily_load,
-            "heat_sink_temp":heat_sink_temp,
+            # "heat_sink_temp":heat_sink_temp,
             "daily_charge":daily_charge
         }
         
