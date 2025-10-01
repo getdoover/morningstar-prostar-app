@@ -42,4 +42,4 @@ class HoldingRegisters(Enum):
     @property
     def index(self):
         """Return the index of this register in the Modbus response list."""
-        return self.value - self.__class__.start_address()
+        return self.value - self.__class__.start_address()-1
