@@ -16,6 +16,11 @@ class MorningstarProstarAppConfig(config.Schema):
         self.modbus_slave_id = config.Integer("Modbus Slave ID", description="Modbus Slave ID for Prostar")
         self.modbus_config = ModbusConfig()
         
+        
+    @property
+    def system_voltage_enum(self):
+        return SystemVoltage(self.sys_voltage.value)
+    
     @property
     def system_voltage(self):
         return self.sys_voltage.value 

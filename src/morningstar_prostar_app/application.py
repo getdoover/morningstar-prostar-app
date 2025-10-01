@@ -53,7 +53,7 @@ class MorningstarProstarAppApplication(Application):
         daily_charge = self._get_val_from_state(result, HoldingRegisters.DAILY_CHARGE)
         daily_load = self._get_val_from_state(result, HoldingRegisters.DAILY_LOAD)
         
-        b_percentage = self.config.sys_voltage.get_battery_percentage(b_voltage)
+        b_percentage = self.config.system_voltage_enum.get_battery_percentage(b_voltage)
         b_ah =  self.config.battery_capacity*b_percentage
 
         return {
