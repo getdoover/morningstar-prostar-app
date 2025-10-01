@@ -39,6 +39,7 @@ class MorningstarProstarAppApplication(Application):
         )
         
         if state is not None:
+            log.info(f"State retrieved: {state}")
             values=self.process_state(state)
             self.ui.update(**values)
             await self.set_tags(values)
@@ -65,9 +66,11 @@ class MorningstarProstarAppApplication(Application):
             "daily_charge":daily_charge
         }
         
-        
-        
     def _get_val_from_state(self, state, reg_enum: HoldingRegisters):
+        log.info(f"Getting value from state: {state}")
+        log.info(f"Register enum: {reg_enum}")
+        log.info(f"Index: {reg_enum.index}")
+        log.info(f"State length: {len(state)}")
         val = state[reg_enum.index]
         return self.int_to_float16_bits(val)
         
