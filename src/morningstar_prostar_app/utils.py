@@ -37,9 +37,9 @@ class HoldingRegisters(Enum):
         to cover all enum values.
         """
         values = [item.value for item in cls]
-        return max(values) - min(values)
+        return max(values) - min(values) + 1
     
     @property
     def index(self):
         """Return the index of this register in the Modbus response list."""
-        return self.value - self.__class__.start_address()-1
+        return self.value - self.__class__.start_address()

@@ -72,7 +72,8 @@ class MorningstarProstarAppApplication(Application):
         log.info(f"Index: {reg_enum.index}")
         log.info(f"State length: {len(state)}")
         val = state[reg_enum.index]
-        return self.int_to_float16_bits(val)
+        res = self.int_to_float16_bits(val)
+        return res
         
     def int_to_float16_bits(self, val: int) -> float:
         if val > 32767:
