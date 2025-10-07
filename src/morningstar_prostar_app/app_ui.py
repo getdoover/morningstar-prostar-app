@@ -7,16 +7,16 @@ class MorningstarProstarAppUI:
         self.config = config
         
         self.battery_voltage = ui.NumericVariable(
-            "voltage", "Battery Voltage", precision=2, ranges=[
+            "voltage", "Battery Voltage (V)", precision=2, ranges=[
                 ui.Range("Low", 0, 10, ui.Colour.red),
                 ui.Range("Normal", 10, 20, ui.Colour.green),
                 ui.Range("High", 20, 30, ui.Colour.blue),
             ]
         )
         
-        self.battery_1_percent = ui.NumericVariable(
+        self.battery_percent = ui.NumericVariable(
             "batteryPercent", 
-            "Battery 1 (%)", 
+            "Battery (%)", 
             precision=1, 
             ranges = [
                 ui.Range("Low", 0, 50, ui.Colour.yellow),
@@ -25,9 +25,9 @@ class MorningstarProstarAppUI:
             ]
         )
 
-        self.remaining_1_ah = ui.NumericVariable(
+        self.remaining_ah = ui.NumericVariable(
             "chargeLevel", 
-            "Battery 1 (Ah)", 
+            "Battery (Ah)", 
             precision=1, 
             ranges = [
                 ui.Range("Low", 0, 100, ui.Colour.yellow),
@@ -36,20 +36,9 @@ class MorningstarProstarAppUI:
             ]
         )
 
-        self.battery_1_voltage = ui.NumericVariable(
-            "batteryVoltage", 
-            "Battery 1 (V)", 
-            precision=1, 
-            ranges = [
-                ui.Range("Low", 0, 23.6, ui.Colour.yellow),
-                ui.Range("Medium", 23.6, 24.5, ui.Colour.blue),
-                ui.Range("High", 24.5, 26, ui.Colour.green)
-            ]
-        )
-
-        self.panel_1_power = ui.NumericVariable(
-            "panelPower1",
-            "Panel 1 Power (W)",
+        self.panel_power = ui.NumericVariable(
+            "panelPower",
+            "Panel Power (W)",
             precision=1,
             ranges = [
                 ui.Range("Low", 0, 200, ui.Colour.yellow),
@@ -58,40 +47,39 @@ class MorningstarProstarAppUI:
             ]
         )
 
-        self.daily_load_1 = ui.NumericVariable(
-            "dailyLoad1",
-            "Daily Load 1 (AHr)",
+        self.daily_load = ui.NumericVariable(
+            "dailyLoad",
+            "Daily Load (AHr)",
             precision=1,
         )
 
-        self.daily_charge_1 = ui.NumericVariable(
-            "dailyCharge1",
-            "Panel Charge 1 (AHr)", #CHECK: units
+        self.daily_charge = ui.NumericVariable(
+            "dailyCharge",
+            "Panel Charge (AHr)", #CHECK: units
             precision=1,
         )
         
     def fetch(self):
         return (
             self.battery_voltage, 
-            self.battery_1_percent, 
-            self.remaining_1_ah, 
-            self.battery_1_voltage, 
-            self.panel_1_power,
-            self.daily_load_1, 
-            self.daily_charge_1
+            self.battery_percent, 
+            self.remaining_ah, 
+            self.panel_power,
+            self.daily_load, 
+            self.daily_charge
         )
         
     def update(self, b_voltage=None, b_percent=None, remaining_ah=None, panel_power=None, daily_load=None, daily_charge=None):
         if b_voltage is not None:
             self.battery_voltage.update(b_voltage)
         if b_percent is not None:
-            self.battery_1_percent.update(b_percent)
+            self.battery_percent.update(b_percent)
         if remaining_ah is not None:
-            self.remaining_1_ah.update(remaining_ah)
+            self.remaining_ah.update(remaining_ah)
         if panel_power is not None:
-            self.panel_1_power.update(panel_power)
+            self.panel_power.update(panel_power)
         if daily_load is not None:
-            self.daily_load_1.update(daily_load)
+            self.daily_load.update(daily_load)
         if daily_charge is not None:
-            self.daily_charge_1.update(daily_charge)
+            self.daily_charge.update(daily_charge)
         
