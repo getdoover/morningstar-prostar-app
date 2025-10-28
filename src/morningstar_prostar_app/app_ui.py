@@ -69,7 +69,17 @@ class MorningstarProstarAppUI:
             self.daily_charge
         )
         
-    def update(self, b_voltage=None, b_percent=None, remaining_ah=None, panel_power=None, daily_load=None, daily_charge=None):
+    def update(self, 
+        b_voltage=None, 
+        b_percent=None, 
+        remaining_ah=None, 
+        panel_power=None, 
+        daily_load=None, 
+        daily_charge=None,
+        panel_voltage=None,
+        panel_current=None,
+        load_current=None
+    ):
         if b_voltage is not None:
             self.battery_voltage.update(b_voltage)
         if b_percent is not None:
