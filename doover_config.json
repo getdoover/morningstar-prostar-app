@@ -11,7 +11,7 @@
             "modbus_interface"
         ],
         "owner_org_key": "36a22e32-ab81-4a39-b400-869d532a052d",
-        "image_name": "ghcr.io/getdoover/morningstar-prostar-app:main",
+        "image_name": "ghcr.io/getdoover/morningstar-prostar-app:dv1",
         "container_registry_profile_key": "88953909-e9c4-4f81-9ec0-56239d4b0a2e",
         "build_args": "--platform linux/amd64,linux/arm64",
         "config_schema": {
