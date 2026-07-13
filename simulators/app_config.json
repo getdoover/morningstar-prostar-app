@@ -1,6 +1,12 @@
 {
-    "simulator_app_key": "sim_app_key",
-    "digital_input_count": 1,
-    "digital_output_count": 2,
-    "a_funny_message": "yeeha"
+    "system_voltage": 24,
+    "battery_max_ah": 230,
+    "modbus_slave_id": 1,
+    "modbus_config": {
+        "bus_type": "serial",
+        "name": "prostar",
+        "serial_port": "/dev/ttyS0",
+        "serial_baud": 9600,
+        "serial_method": "rtu"
+    }
 }

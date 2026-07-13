@@ -1,95 +1,120 @@
+from pathlib import Path
+
 from pydoover import ui
 
-from .app_config import MorningstarProstarAppConfig
+from .app_tags import MorningstarProstarAppTags as Tags
 
-class MorningstarProstarAppUI:
-    def __init__(self, config: MorningstarProstarAppConfig):
-        self.config = config
-        
-        self.battery_voltage = ui.NumericVariable(
-            "voltage", "Battery Voltage (V)", precision=2, ranges=[
-                ui.Range("Low", 0, 10, ui.Colour.red),
-                ui.Range("Normal", 10, 20, ui.Colour.green),
-                ui.Range("High", 20, 30, ui.Colour.blue),
+
+class MorningstarProstarAppUI(ui.UI):
+    # Battery voltage and Ah ranges are derived from config in setup() (they
+    # depend on the configured system voltage and battery capacity). Battery %
+    # is intrinsically 0-100 so its bands are static.
+    battery_voltage = ui.NumericVariable(
+        "Battery Voltage",
+        name="voltage",
+        value=Tags.b_voltage,
+        units="V",
+        precision=2,
+    )
+    battery_percent = ui.NumericVariable(
+        "Battery",
+        name="batteryPercent",
+        value=Tags.b_percent,
+        units="%",
+        precision=1,
+        ranges=[
+            ui.Range("Low", 0, 50, colour=ui.Colour.yellow),
+            ui.Range("Medium", 50, 75, colour=ui.Colour.blue),
+            ui.Range("High", 75, 100, colour=ui.Colour.green),
+        ],
+    )
+    remaining_ah = ui.NumericVariable(
+        "Battery Charge",
+        name="chargeLevel",
+        value=Tags.remaining_ah,
+        units="Ah",
+        precision=1,
+    )
+    panel_power = ui.NumericVariable(
+        "Panel Power",
+        name="panelPower",
+        value=Tags.panel_power,
+        units="W",
+        precision=1,
+    )
+    daily_load = ui.NumericVariable(
+        "Daily Load",
+        name="dailyLoad",
+        value=Tags.daily_load,
+        units="Ah",
+        precision=1,
+    )
+    daily_charge = ui.NumericVariable(
+        "Panel Charge",
+        name="dailyCharge",
+        value=Tags.daily_charge,
+        units="Ah",
+        precision=1,
+    )
+
+    comms_warning = ui.WarningIndicator(
+        "No communication with solar controller",
+        name="commsWarning",
+        hidden=Tags.comms_ok,
+    )
+
+    details = ui.Submodule(
+        "Details",
+        name="details",
+        children=[
+            ui.NumericVariable(
+                "Panel Voltage",
+                name="panelVoltage",
+                value=Tags.panel_voltage,
+                units="V",
+                precision=2,
+            ),
+            ui.NumericVariable(
+                "Panel Current",
+                name="panelCurrent",
+                value=Tags.panel_current,
+                units="A",
+                precision=2,
+            ),
+            ui.NumericVariable(
+                "Load Current",
+                name="loadCurrent",
+                value=Tags.load_current,
+                units="A",
+                precision=2,
+            ),
+        ],
+    )
+
+    async def setup(self):
+        sv = self.config.system_voltage_enum
+        empty = sv.empty_voltage
+        full = sv.full_voltage
+        self.battery_voltage.ranges = [
+            ui.Range("Low", 0, round(empty, 2), colour=ui.Colour.red),
+            ui.Range("Normal", round(empty, 2), round(full, 2), colour=ui.Colour.green),
+            ui.Range("High", round(full, 2), round(full * 1.15, 2), colour=ui.Colour.blue),
+        ]
+
+        capacity = self.config.battery_capacity
+        if capacity:
+            self.remaining_ah.ranges = [
+                ui.Range("Low", 0, round(capacity * 0.5, 1), colour=ui.Colour.yellow),
+                ui.Range("Medium", round(capacity * 0.5, 1), round(capacity * 0.8, 1), colour=ui.Colour.blue),
+                ui.Range("High", round(capacity * 0.8, 1), round(capacity, 1), colour=ui.Colour.green),
             ]
-        )
-        
-        self.battery_percent = ui.NumericVariable(
-            "batteryPercent", 
-            "Battery (%)", 
-            precision=1, 
-            ranges = [
-                ui.Range("Low", 0, 50, ui.Colour.yellow),
-                ui.Range("Medium", 50, 75, ui.Colour.blue),
-                ui.Range("High", 75, 100, ui.Colour.green)
-            ]
-        )
 
-        self.remaining_ah = ui.NumericVariable(
-            "chargeLevel", 
-            "Battery (Ah)", 
-            precision=1, 
-            ranges = [
-                ui.Range("Low", 0, 100, ui.Colour.yellow),
-                ui.Range("Medium", 150, 200, ui.Colour.blue),
-                ui.Range("High", 200, 230, ui.Colour.green)
-            ]
-        )
 
-        self.panel_power = ui.NumericVariable(
-            "panelPower",
-            "Panel Power (W)",
-            precision=1,
-            ranges = [
-                ui.Range("Low", 0, 200, ui.Colour.yellow),
-                ui.Range("Medium", 200, 300, ui.Colour.blue),
-                ui.Range("High", 300, 480, ui.Colour.green)
-            ]
-        )
+def export():
+    MorningstarProstarAppUI(None, None, None).export(
+        Path(__file__).parents[2] / "doover_config.json", "morningstar_prostar_app"
+    )
 
-        self.daily_load = ui.NumericVariable(
-            "dailyLoad",
-            "Daily Load (AHr)",
-            precision=1,
-        )
 
-        self.daily_charge = ui.NumericVariable(
-            "dailyCharge",
-            "Panel Charge (AHr)", #CHECK: units
-            precision=1,
-        )
-        
-    def fetch(self):
-        return (
-            self.battery_voltage, 
-            self.battery_percent, 
-            self.remaining_ah, 
-            self.panel_power,
-            self.daily_load, 
-            self.daily_charge
-        )
-        
-    def update(self, 
-        b_voltage=None, 
-        b_percent=None, 
-        remaining_ah=None, 
-        panel_power=None, 
-        daily_load=None, 
-        daily_charge=None,
-        panel_voltage=None,
-        panel_current=None,
-        load_current=None
-    ):
-        if b_voltage is not None:
-            self.battery_voltage.update(b_voltage)
-        if b_percent is not None:
-            self.battery_percent.update(b_percent)
-        if remaining_ah is not None:
-            self.remaining_ah.update(remaining_ah)
-        if panel_power is not None:
-            self.panel_power.update(panel_power)
-        if daily_load is not None:
-            self.daily_load.update(daily_load)
-        if daily_charge is not None:
-            self.daily_charge.update(daily_charge)
-        
+if __name__ == "__main__":
+    export()
