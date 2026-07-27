@@ -54,7 +54,7 @@ class MorningstarProstarAppApplication(Application):
 
     async def _read_registers(self):
         try:
-            return await self.modbus_iface.read_registers(
+            registers = await self.modbus_iface.read_registers(
                 bus_id=self.config.modbus_config.name.value,
                 modbus_id=self.config.slave_id,
                 start_address=self.START_ADDRESS,
@@ -64,6 +64,14 @@ class MorningstarProstarAppApplication(Application):
         except Exception:
             log.exception("Error reading registers from ProStar")
             return None
+
+        # pydoover returns the gRPC response's repeated-scalar container as-is,
+        # which is NOT a list -- and a bare int when a single register was read.
+        # Normalise to a list here so _is_valid_block's isinstance check holds;
+        # without this every successful 52-register read is silently discarded.
+        if registers is None or isinstance(registers, int):
+            return None
+        return list(registers)
 
     def _is_valid_block(self, registers) -> bool:
         # read_registers returns None on failure, or a list of ints on success.
