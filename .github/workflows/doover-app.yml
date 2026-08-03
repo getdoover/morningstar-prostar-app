@@ -1,0 +1,20 @@
+name: Doover App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  app:
+    # TODO: pin to @v1 before rolling this out beyond this repo.
+    # @main is for the initial test loop only — it means an unreviewed push to
+    # getdoover/workflows takes effect here immediately, and this job holds
+    # id-token: write, so it can mint Doover publish credentials.
+    uses: getdoover/workflows/.github/workflows/app.yml@main
+    secrets: inherit
