@@ -27,6 +27,7 @@ import os
 import select
 import socket
 import struct
+import subprocess
 import sys
 import time
 
@@ -83,6 +84,61 @@ class Timeout(Exception):
 
 class BadResponse(Exception):
     pass
+
+
+# --------------------------------------------------------------------------
+# Doovit RS485 transceiver -- must be programmed before the port is usable
+# --------------------------------------------------------------------------
+
+# On a doovit, /dev/ttyAMA0 runs through an RS485 transceiver managed by the
+# doovitd daemon. termios can set the UART's framing but not the transceiver's
+# mode, terminator resistor or A/B polarity, so an unconfigured transceiver
+# times out identically to dead wiring. `dvt set_serial_params` programs it:
+#   baudrate rs485_mode terminator_resistor bits parity stop
+#   timeout_ms read_chunk_timeout_ms invert_ab
+DVT_RESPONSE_TIMEOUT_MS = 300
+DVT_READ_CHUNK_TIMEOUT_MS = 50
+
+
+def dvt_serial_command(baud, stopbits):
+    return [
+        "dvt",
+        "set_serial_params",
+        str(baud),
+        "True",  # rs485_mode
+        "True",  # terminator_resistor
+        "8",  # data bits
+        "N",  # parity
+        str(stopbits),
+        str(DVT_RESPONSE_TIMEOUT_MS),
+        str(DVT_READ_CHUNK_TIMEOUT_MS),
+        "True",  # invert_ab
+    ]
+
+
+def configure_transceiver(port, baud, stopbits):
+    """Program the doovit's RS485 transceiver via dvt before opening the port.
+
+    Returns (status, detail): status is "ok", "skipped" or "failed". Only the
+    doovit's own UART (ttyAMA*) goes through the transceiver -- USB dongles and
+    bench machines are skipped, and a missing dvt binary means this isn't a
+    doovit, which is fine.
+    """
+    if "ttyAMA" not in os.path.basename(port):
+        return "skipped", f"{port} is not the doovit's own UART"
+    cmd = dvt_serial_command(baud, stopbits)
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=15, check=False
+        )
+    except FileNotFoundError:
+        return "skipped", "dvt not on PATH (not a doovit?)"
+    except subprocess.TimeoutExpired:
+        return "failed", f"{' '.join(cmd)} timed out after 15 s"
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout).strip()
+        return "failed", f"{' '.join(cmd)} exited {proc.returncode}: {err}"
+    return "ok", " ".join(cmd)
 
 
 # --------------------------------------------------------------------------
@@ -264,6 +320,11 @@ def parse_args(argv=None):
     )
     p.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     p.add_argument(
+        "--no-dvt",
+        action="store_true",
+        help="skip programming the doovit RS485 transceiver (dvt set_serial_params)",
+    )
+    p.add_argument(
         "--attempts",
         type=int,
         default=DEFAULT_ATTEMPTS,
@@ -285,6 +346,11 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
     target = args.host or args.port
+
+    if args.port and not args.no_dvt:
+        status, detail = configure_transceiver(args.port, BAUD, args.stopbits)
+        # stderr so --json keeps stdout to the single result object
+        print(f"transceiver {status}: {detail}", file=sys.stderr)
 
     errors = []
     for attempt in range(1, args.attempts + 1):

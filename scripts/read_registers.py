@@ -25,6 +25,8 @@ Usage (pymodbus is not an app dependency, so pull it in ad hoc):
 
 import argparse
 import importlib.util
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -53,6 +55,51 @@ decode_float16 = _utils.decode_float16
 DEFAULT_BAUD = 9600
 DEFAULT_SLAVE = 1
 DEFAULT_TCP_PORT = 502
+
+# The doovit's own UART (/dev/ttyAMA0) runs through an RS485 transceiver managed
+# by the doovitd daemon -- pyserial can set framing but not the transceiver's
+# mode, terminator resistor or A/B polarity, so it must be programmed first via
+# `dvt set_serial_params`:
+#   baudrate rs485_mode terminator_resistor bits parity stop
+#   timeout_ms read_chunk_timeout_ms invert_ab
+DVT_RESPONSE_TIMEOUT_MS = 300
+DVT_READ_CHUNK_TIMEOUT_MS = 50
+
+
+def configure_transceiver(port, baud, stopbits=2):
+    """Program the doovit's RS485 transceiver via dvt before opening the port.
+
+    Returns (status, detail): status is "ok", "skipped" or "failed". Only
+    ttyAMA* goes through the transceiver -- USB dongles and bench machines are
+    skipped, as is any machine without the dvt binary.
+    """
+    if "ttyAMA" not in os.path.basename(port):
+        return "skipped", f"{port} is not the doovit's own UART"
+    cmd = [
+        "dvt",
+        "set_serial_params",
+        str(baud),
+        "True",  # rs485_mode
+        "True",  # terminator_resistor
+        "8",  # data bits
+        "N",  # parity
+        str(stopbits),
+        str(DVT_RESPONSE_TIMEOUT_MS),
+        str(DVT_READ_CHUNK_TIMEOUT_MS),
+        "True",  # invert_ab
+    ]
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=15, check=False
+        )
+    except FileNotFoundError:
+        return "skipped", "dvt not on PATH (not a doovit?)"
+    except subprocess.TimeoutExpired:
+        return "failed", f"{' '.join(cmd)} timed out after 15 s"
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout).strip()
+        return "failed", f"{' '.join(cmd)} exited {proc.returncode}: {err}"
+    return "ok", " ".join(cmd)
 
 
 def build_client(args):
@@ -194,6 +241,11 @@ def parse_args(argv=None):
     transport.add_argument(
         "--slave", type=int, default=DEFAULT_SLAVE, help="Modbus slave/unit ID"
     )
+    transport.add_argument(
+        "--no-dvt",
+        action="store_true",
+        help="skip programming the doovit RS485 transceiver (dvt set_serial_params)",
+    )
 
     p.add_argument(
         "--system-voltage",
@@ -229,6 +281,9 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
+    if args.port and not args.no_dvt:
+        status, detail = configure_transceiver(args.port, args.baud)
+        print(f"transceiver {status}: {detail}", file=sys.stderr)
     client, target = build_client(args)
     print(f"Connected: {target}, slave {args.slave}\n")
 

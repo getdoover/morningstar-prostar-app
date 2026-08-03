@@ -18,8 +18,13 @@ without building a venv. Exit code is the verdict:
     1 -> at least one check failed
     2 -> bad invocation
 
-Two things this checks that a plain register read does not:
+Three things this checks that a plain register read does not:
 
+* **The RS485 transceiver.** The doovit's own UART (``/dev/ttyAMA0``) runs
+  through a transceiver managed by the doovitd daemon; termios cannot set its
+  RS485 mode, terminator resistor or A/B polarity. When the port is ``ttyAMA*``
+  this first programs it with ``dvt set_serial_params`` -- unconfigured, the bus
+  times out identically to dead wiring (skip with ``--no-dvt``).
 * **Port contention.** On a doovit the ``modbus_interface`` container owns
   ``/dev/ttyAMA0``. Two masters on one RS485 bus corrupt each other's frames, so
   a test run against a port someone else holds fails for reasons that have
@@ -37,6 +42,7 @@ import os
 import select
 import statistics
 import struct
+import subprocess
 import sys
 import termios
 import time
@@ -156,6 +162,58 @@ def plausible_ranges(system_voltage):
         "DAILY_CHARGE": (0.0, 2000.0),
         "DAILY_LOAD": (0.0, 2000.0),
     }
+
+
+# ---------------------------------------------------------------------------
+# Doovit RS485 transceiver -- must be programmed before the port is usable
+# ---------------------------------------------------------------------------
+
+# `dvt set_serial_params` argument order (talks to the doovitd daemon):
+#   baudrate rs485_mode terminator_resistor bits parity stop
+#   timeout_ms read_chunk_timeout_ms invert_ab
+DVT_RESPONSE_TIMEOUT_MS = 300
+DVT_READ_CHUNK_TIMEOUT_MS = 50
+
+
+def dvt_serial_command(baud, stopbits):
+    return [
+        "dvt",
+        "set_serial_params",
+        str(baud),
+        "True",  # rs485_mode
+        "True",  # terminator_resistor
+        "8",  # data bits
+        "N",  # parity
+        str(stopbits),
+        str(DVT_RESPONSE_TIMEOUT_MS),
+        str(DVT_READ_CHUNK_TIMEOUT_MS),
+        "True",  # invert_ab
+    ]
+
+
+def configure_transceiver(port, baud, stopbits):
+    """Program the doovit's RS485 transceiver via dvt before opening the port.
+
+    Returns (status, detail): status is "ok", "skipped" or "failed". Only the
+    doovit's own UART (ttyAMA*) goes through the transceiver -- USB dongles and
+    bench machines are skipped, and a missing dvt binary means this isn't a
+    doovit, which is fine.
+    """
+    if "ttyAMA" not in os.path.basename(port):
+        return "skipped", f"{port} is not the doovit's own UART"
+    cmd = dvt_serial_command(baud, stopbits)
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=15, check=False
+        )
+    except FileNotFoundError:
+        return "skipped", "dvt not on PATH (not a doovit?)"
+    except subprocess.TimeoutExpired:
+        return "failed", f"{' '.join(cmd)} timed out after 15 s"
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout).strip()
+        return "failed", f"{' '.join(cmd)} exited {proc.returncode}: {err}"
+    return "ok", " ".join(cmd)
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +398,15 @@ def run_tests(args, report):
     sv = SystemVoltage(args.system_voltage)
     ranges = plausible_ranges(sv)
     results = {"port": args.port, "slave": args.slave, "values": None, "derived": None}
+
+    # -- 0. transceiver ------------------------------------------------------
+    if args.no_dvt:
+        report.add("rs485 transceiver", True, "skipped (--no-dvt)", skipped=True)
+    else:
+        status, detail = configure_transceiver(args.port, args.baud, args.stopbits)
+        report.add(
+            "rs485 transceiver", status == "ok", detail, skipped=status == "skipped"
+        )
 
     # -- 1. contention -------------------------------------------------------
     holders, complete = port_holders(args.port)
@@ -570,6 +637,11 @@ def parse_args(argv=None):
         help="3 = holding registers (what the app uses), 4 = input registers",
     )
     p.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
+    p.add_argument(
+        "--no-dvt",
+        action="store_true",
+        help="skip programming the doovit RS485 transceiver (dvt set_serial_params)",
+    )
     p.add_argument(
         "--system-voltage",
         type=int,
