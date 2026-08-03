@@ -5,7 +5,7 @@ description = "Doover device app that monitors a Morningstar ProStar solar charg
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pydoover>=1.9.1",
+    "pydoover>=1.12.1",
 ]
 
 [project.scripts]
